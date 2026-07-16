@@ -81,8 +81,10 @@ body {
 }
 
 .logo {
+  display: block;
   width: 210px;
   height: 210px;
+  margin: 0 auto;
   object-fit: contain;
   border-radius: 40px;
   filter:
