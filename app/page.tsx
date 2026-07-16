@@ -208,7 +208,7 @@ export default function Home() {
           </p>
 
           <a
-            href="mailto:support@ghostatlas.app"
+            href="mailto:support@blacktidessoftware.com"
             className="contact-button"
           >
             Contact Support
@@ -230,7 +230,7 @@ export default function Home() {
         <div className="footer-links">
           <a href="#support">Support</a>
           <span>•</span>
-          <a href="mailto:support@ghostatlas.app">Contact</a>
+          <a href="mailto:support@blacktidessoftware.com">Contact</a>
         </div>
 
         <p className="copyright">
