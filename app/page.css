@@ -27,7 +27,7 @@ body {
   position: relative;
   display: flex;
   justify-content: center;
-  align-items: flex-start;
+  align-items: center;
   overflow: hidden;
   padding: 55px 20px 95px;
   background:
@@ -76,6 +76,7 @@ body {
   z-index: 4;
   width: 100%;
   max-width: 760px;
+  margin: 0 auto;
   text-align: center;
 }
 
