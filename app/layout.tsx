@@ -13,8 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Ghost Atlas App",
-  description: "Ghost Atlas - Coming Soon",
+  title: "Ghost Atlas | Haunted Places. Mapped.",
+  description:
+    "Ghost Atlas is a free interactive guide to haunted places, paranormal hotspots, eerie legends, ghost stories, and mysterious locations.",
 };
 
 export default function RootLayout({
@@ -25,9 +26,9 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable}`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body>{children}</body>
     </html>
   );
 }
