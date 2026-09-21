@@ -150,42 +150,27 @@ body {
 .store-buttons {
   display: flex;
   justify-content: center;
+  align-items: center;
   flex-wrap: wrap;
   gap: 14px;
   margin-top: 30px;
 }
 
-.store-button {
-  min-width: 170px;
-  padding: 9px 22px 11px;
-  color: white;
-  text-decoration: none;
-  text-align: left;
-  background: rgba(5, 4, 8, 0.94);
-  border: 1px solid rgba(195, 164, 222, 0.32);
-  border-radius: 10px;
-  box-shadow:
-    0 10px 30px rgba(0, 0, 0, 0.35),
-    0 0 20px rgba(109, 65, 148, 0.12);
+.store-buttons a {
+  display: inline-block;
+  line-height: 0;
 }
 
-.store-button small,
-.store-button strong {
+.store-badge {
+  height: 52px;
+  width: auto;
   display: block;
+  transition: transform 0.2s ease, opacity 0.2s ease;
 }
 
-.store-button small {
-  font-size: 10px;
-  opacity: 0.72;
-}
-
-.store-button strong {
-  font-size: 20px;
-}
-
-.store-button.disabled {
-  opacity: 0.72;
-  cursor: default;
+.store-buttons a:hover .store-badge {
+  transform: translateY(-2px);
+  opacity: 0.9;
 }
 
 .store-note {
