@@ -31,18 +31,30 @@ export default function Home() {
           </p>
 
           <div className="store-buttons">
-            <a className="store-button disabled" aria-disabled="true">
-              <small>Download on the</small>
-              <strong>App Store</strong>
-            </a>
+  <a
+    href="https://apps.apple.com/us/app/ghost-atlas-haunted-places/id6791018674"
+    target="_blank"
+    rel="noopener noreferrer"
+  >
+    <img
+      src="/black.svg"
+      alt="Download Ghost Atlas on the App Store"
+      className="store-badge"
+    />
+  </a>
 
-            <a className="store-button disabled" aria-disabled="true">
-              <small>GET IT ON</small>
-              <strong>Google Play</strong>
-            </a>
-          </div>
-
-          <p className="store-note">Download links coming soon.</p>
+  <a
+    href="https://play.google.com/store/apps/details?id=com.blacktidesoftware.ghostatlas"
+    target="_blank"
+    rel="noopener noreferrer"
+  >
+    <img
+      src="/GetItOnGooglePlay_Badge_Web_color_English.svg"
+      alt="Get Ghost Atlas on Google Play"
+      className="store-badge"
+    />
+  </a>
+</div>
 
           {/* Lantern centerpiece — cropped from existing Ghost Atlas artwork */}
           <div className="lantern-stage" aria-hidden="true">
