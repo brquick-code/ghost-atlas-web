@@ -21,6 +21,46 @@ type LocationRow = {
   haunting_rating: number | null;
 };
 
+function createGhostAtlasPin(): ImageData {
+  const canvas = document.createElement('canvas');
+  canvas.width = 48;
+  canvas.height = 60;
+
+  const context = canvas.getContext('2d');
+  if (!context) throw new Error('Unable to create Ghost Atlas pin');
+
+  const width = canvas.width;
+  const height = canvas.height;
+  const centerX = width / 2;
+
+  context.clearRect(0, 0, width, height);
+
+  // Classic map-pin silhouette in the Ghost Atlas purple palette.
+  context.beginPath();
+  context.moveTo(centerX, height - 2);
+  context.bezierCurveTo(width * 0.44, height * 0.86, width * 0.14, height * 0.61, width * 0.14, height * 0.36);
+  context.bezierCurveTo(width * 0.14, height * 0.15, width * 0.30, 2, centerX, 2);
+  context.bezierCurveTo(width * 0.70, 2, width * 0.86, height * 0.15, width * 0.86, height * 0.36);
+  context.bezierCurveTo(width * 0.86, height * 0.61, width * 0.56, height * 0.86, centerX, height - 2);
+  context.closePath();
+  context.fillStyle = '#9a4dcc';
+  context.fill();
+  context.lineWidth = 4;
+  context.strokeStyle = '#26102f';
+  context.stroke();
+
+  // Small light center keeps the marker readable over light and dark map areas.
+  context.beginPath();
+  context.arc(centerX, 20, 7.5, 0, Math.PI * 2);
+  context.fillStyle = '#f1ddff';
+  context.fill();
+  context.lineWidth = 2.5;
+  context.strokeStyle = '#26102f';
+  context.stroke();
+
+  return context.getImageData(0, 0, width, height);
+}
+
 export default function MapPage() {
   const mapNode = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState('Loading haunted locations…');
@@ -95,6 +135,10 @@ export default function MapPage() {
           try {
             if (map.getSource('haunts')) return;
 
+            if (!map.hasImage('ghost-atlas-pin')) {
+              map.addImage('ghost-atlas-pin', createGhostAtlasPin(), { pixelRatio: 2 });
+            }
+
             map.addSource('haunts', {
               type: 'geojson',
               data: geojson,
@@ -130,14 +174,15 @@ export default function MapPage() {
 
             map.addLayer({
               id: 'haunt-points',
-              type: 'circle',
+              type: 'symbol',
               source: 'haunts',
               filter: ['!', ['has', 'point_count']],
-              paint: {
-                'circle-color': '#bc7bf1',
-                'circle-radius': 7,
-                'circle-stroke-width': 2,
-                'circle-stroke-color': '#25102f',
+              layout: {
+                'icon-image': 'ghost-atlas-pin',
+                'icon-anchor': 'bottom',
+                'icon-size': 1,
+                'icon-allow-overlap': true,
+                'icon-ignore-placement': true,
               },
             });
 
@@ -179,7 +224,7 @@ export default function MapPage() {
               link.textContent = 'View location →';
 
               card.append(title, place, link);
-              new maplibregl.Popup({ offset: 12 })
+              new maplibregl.Popup({ offset: 26 })
                 .setLngLat(coords)
                 .setDOMContent(card)
                 .addTo(map);
