@@ -4,6 +4,10 @@ import { useEffect, useRef, useState } from 'react';
 import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
+maplibregl.setWorkerUrl(
+  new URL('maplibre-gl/dist/maplibre-gl-worker.mjs', import.meta.url).toString()
+);
+
 type LocationRow = {
   id: string;
   title: string;
@@ -45,8 +49,12 @@ export default function MapPage() {
           (item) =>
             typeof item.latitude === 'number' &&
             Number.isFinite(item.latitude) &&
+            item.latitude >= -90 &&
+            item.latitude <= 90 &&
             typeof item.longitude === 'number' &&
-            Number.isFinite(item.longitude)
+            Number.isFinite(item.longitude) &&
+            item.longitude >= -180 &&
+            item.longitude <= 180
         );
 
         if (!mapped.length) throw new Error('No mapped locations returned');
@@ -81,110 +89,123 @@ export default function MapPage() {
 
         map.addControl(new maplibregl.NavigationControl(), 'top-right');
 
-        map.once('load', () => {
+        const addGhostAtlasLayers = () => {
           if (!map || disposed) return;
 
-          map.addSource('haunts', {
-            type: 'geojson',
-            data: geojson,
-            cluster: true,
-            clusterMaxZoom: 12,
-            clusterRadius: 48,
-          });
+          try {
+            if (map.getSource('haunts')) return;
 
-          map.addLayer({
-            id: 'clusters',
-            type: 'circle',
-            source: 'haunts',
-            filter: ['has', 'point_count'],
-            paint: {
-              'circle-color': '#7d43b5',
-              'circle-stroke-color': '#e3c2ff',
-              'circle-stroke-width': 2.5,
-              'circle-radius': ['step', ['get', 'point_count'], 19, 25, 24, 100, 30],
-            },
-          });
+            map.addSource('haunts', {
+              type: 'geojson',
+              data: geojson,
+              cluster: true,
+              clusterMaxZoom: 12,
+              clusterRadius: 48,
+            });
 
-          map.addLayer({
-            id: 'cluster-count',
-            type: 'symbol',
-            source: 'haunts',
-            filter: ['has', 'point_count'],
-            layout: {
-              'text-field': ['get', 'point_count_abbreviated'],
-              'text-size': 12,
-            },
-            paint: { 'text-color': '#ffffff' },
-          });
+            map.addLayer({
+              id: 'clusters',
+              type: 'circle',
+              source: 'haunts',
+              filter: ['has', 'point_count'],
+              paint: {
+                'circle-color': '#7d43b5',
+                'circle-stroke-color': '#e3c2ff',
+                'circle-stroke-width': 2.5,
+                'circle-radius': ['step', ['get', 'point_count'], 19, 25, 24, 100, 30],
+              },
+            });
 
-          map.addLayer({
-            id: 'haunt-points',
-            type: 'circle',
-            source: 'haunts',
-            filter: ['!', ['has', 'point_count']],
-            paint: {
-              'circle-color': '#bc7bf1',
-              'circle-radius': 7,
-              'circle-stroke-width': 2,
-              'circle-stroke-color': '#25102f',
-            },
-          });
+            map.addLayer({
+              id: 'cluster-count',
+              type: 'symbol',
+              source: 'haunts',
+              filter: ['has', 'point_count'],
+              layout: {
+                'text-field': ['get', 'point_count_abbreviated'],
+                'text-size': 12,
+              },
+              paint: { 'text-color': '#ffffff' },
+            });
 
-          map.on('click', 'clusters', async (event) => {
-            if (!map) return;
-            const feature = event.features?.[0];
-            const clusterId = feature?.properties?.cluster_id;
-            const coordinates = feature?.geometry.type === 'Point' ? feature.geometry.coordinates : null;
-            if (clusterId == null || !coordinates) return;
+            map.addLayer({
+              id: 'haunt-points',
+              type: 'circle',
+              source: 'haunts',
+              filter: ['!', ['has', 'point_count']],
+              paint: {
+                'circle-color': '#bc7bf1',
+                'circle-radius': 7,
+                'circle-stroke-width': 2,
+                'circle-stroke-color': '#25102f',
+              },
+            });
 
-            const source = map.getSource('haunts') as maplibregl.GeoJSONSource;
-            try {
-              const zoom = await source.getClusterExpansionZoom(clusterId);
-              map.easeTo({ center: coordinates as [number, number], zoom });
-            } catch {
-              // Cluster membership can change while zooming.
+            map.on('click', 'clusters', async (event) => {
+              if (!map) return;
+              const feature = event.features?.[0];
+              const clusterId = feature?.properties?.cluster_id;
+              const coordinates = feature?.geometry.type === 'Point' ? feature.geometry.coordinates : null;
+              if (clusterId == null || !coordinates) return;
+
+              const source = map.getSource('haunts') as maplibregl.GeoJSONSource;
+              try {
+                const zoom = await source.getClusterExpansionZoom(clusterId);
+                map.easeTo({ center: coordinates as [number, number], zoom });
+              } catch {
+                // Cluster membership can change while zooming.
+              }
+            });
+
+            map.on('click', 'haunt-points', (event) => {
+              if (!map) return;
+              const feature = event.features?.[0];
+              if (!feature || feature.geometry.type !== 'Point') return;
+
+              const coords = feature.geometry.coordinates as [number, number];
+              const props = feature.properties || {};
+
+              const card = document.createElement('div');
+              card.className = 'map-popup-card';
+
+              const title = document.createElement('strong');
+              title.textContent = String(props.title || 'Haunted location');
+
+              const place = document.createElement('span');
+              place.textContent = String(props.place || '');
+
+              const link = document.createElement('a');
+              link.href = `/location/${String(props.slug || '')}`;
+              link.textContent = 'View location →';
+
+              card.append(title, place, link);
+              new maplibregl.Popup({ offset: 12 })
+                .setLngLat(coords)
+                .setDOMContent(card)
+                .addTo(map);
+            });
+
+            for (const layer of ['clusters', 'haunt-points']) {
+              map.on('mouseenter', layer, () => {
+                if (map) map.getCanvas().style.cursor = 'pointer';
+              });
+              map.on('mouseleave', layer, () => {
+                if (map) map.getCanvas().style.cursor = '';
+              });
             }
-          });
 
-          map.on('click', 'haunt-points', (event) => {
-            if (!map) return;
-            const feature = event.features?.[0];
-            if (!feature || feature.geometry.type !== 'Point') return;
-
-            const coords = feature.geometry.coordinates as [number, number];
-            const props = feature.properties || {};
-
-            const card = document.createElement('div');
-            card.className = 'map-popup-card';
-
-            const title = document.createElement('strong');
-            title.textContent = String(props.title || 'Haunted location');
-
-            const place = document.createElement('span');
-            place.textContent = String(props.place || '');
-
-            const link = document.createElement('a');
-            link.href = `/location/${String(props.slug || '')}`;
-            link.textContent = 'View location →';
-
-            card.append(title, place, link);
-            new maplibregl.Popup({ offset: 12 })
-              .setLngLat(coords)
-              .setDOMContent(card)
-              .addTo(map);
-          });
-
-          for (const layer of ['clusters', 'haunt-points']) {
-            map.on('mouseenter', layer, () => {
-              if (map) map.getCanvas().style.cursor = 'pointer';
-            });
-            map.on('mouseleave', layer, () => {
-              if (map) map.getCanvas().style.cursor = '';
-            });
+            setStatus(`${mapped.length.toLocaleString()} haunted locations mapped`);
+          } catch (layerError) {
+            console.error('Ghost Atlas pin layer failed', layerError);
+            setStatus('Basemap loaded, but Ghost Atlas pins could not be drawn.');
           }
+        };
 
-          setStatus(`${mapped.length.toLocaleString()} haunted locations mapped`);
-        });
+        if (map.isStyleLoaded()) {
+          addGhostAtlasLayers();
+        } else {
+          map.once('style.load', addGhostAtlasLayers);
+        }
       } catch (error) {
         if (disposed) return;
         console.error('Ghost Atlas map initialization failed', error);
