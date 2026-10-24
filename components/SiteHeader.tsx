@@ -4,6 +4,7 @@ const links = [
   ["Map", "/map"],
   ["Directory", "/directory"],
   ["Favorites", "/favorites"],
+  ["About", "/about"],
   ["Submit", "/submit"],
 ] as const;
 
