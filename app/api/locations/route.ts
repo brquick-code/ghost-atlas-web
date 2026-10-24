@@ -1,34 +1,45 @@
 import { supabaseRest } from '@/lib/supabase-rest';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 300;
 
-export async function GET() {
-  const rows: unknown[] = [];
-  const batchSize = 1000;
-  const select = [
-    'id','title','slug','city','state','country','latitude','longitude',
-    'location_type','category','haunting_rating','legend_summary','short_address',
-    'is_private_property','access_status'
-  ].join(',');
+const batchSize = 1000;
+const maxRows = 12000;
 
-  for (let start = 0; start < 10000; start += batchSize) {
-    const response = await supabaseRest(
-      `haunted_locations?select=${select}&is_published=eq.true&order=title.asc`,
-      { headers: { Range: `${start}-${start + batchSize - 1}` }, cache: 'no-store' }
-    );
+async function fetchBatch(start: number, select: string) {
+  const response = await supabaseRest(
+    `haunted_locations?select=${select}&is_published=eq.true&order=title.asc`,
+    {
+      headers: { Range: `${start}-${start + batchSize - 1}` },
+      next: { revalidate: 300 },
+    } as RequestInit
+  );
 
-    if (!response.ok) {
-      return Response.json({ error: 'Unable to load Ghost Atlas locations.' }, { status: 502 });
-    }
-
-    const batch = (await response.json()) as unknown[];
-    rows.push(...batch);
-    if (batch.length < batchSize) break;
+  if (!response.ok) {
+    throw new Error(`Ghost Atlas locations request failed: ${response.status}`);
   }
 
-  return Response.json(rows, {
-    headers: {
-      'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
-    },
-  });
+  return (await response.json()) as unknown[];
+}
+
+export async function GET() {
+  try {
+    const select = [
+      'id','title','slug','city','state','country','latitude','longitude',
+      'location_type','category','haunting_rating','legend_summary','short_address',
+      'is_private_property','access_status'
+    ].join(',');
+
+    const starts = Array.from({ length: maxRows / batchSize }, (_, index) => index * batchSize);
+    const batches = await Promise.all(starts.map((start) => fetchBatch(start, select)));
+    const rows = batches.flat();
+
+    return Response.json(rows, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=1800',
+      },
+    });
+  } catch (error) {
+    console.error('Ghost Atlas directory feed failed', error);
+    return Response.json({ error: 'Unable to load Ghost Atlas locations.' }, { status: 502 });
+  }
 }
