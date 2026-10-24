@@ -1,0 +1,123 @@
+.maplibregl-popup {
+  z-index: 8;
+}
+
+.maplibregl-popup-content {
+  position: relative;
+  overflow: hidden;
+  background:
+    linear-gradient(145deg, rgba(25, 16, 31, 0.98), rgba(12, 9, 16, 0.98)) !important;
+  color: #f7f2fb !important;
+  border: 1px solid rgba(201, 150, 243, 0.26);
+  border-radius: 13px !important;
+  box-shadow:
+    0 16px 36px rgba(0, 0, 0, 0.42),
+    0 0 24px rgba(119, 67, 154, 0.10) !important;
+  padding: 0 !important;
+}
+
+.maplibregl-popup-anchor-bottom .maplibregl-popup-tip {
+  border-top-color: #130d18 !important;
+}
+
+.maplibregl-popup-close-button {
+  top: 4px;
+  right: 5px;
+  width: 24px;
+  height: 24px;
+  padding: 0 !important;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  color: #d9cfdf;
+  background: rgba(255, 255, 255, 0.035);
+  font-size: 16px;
+  line-height: 1;
+}
+
+.maplibregl-popup-close-button:hover {
+  color: #ffffff;
+  background: rgba(201, 150, 243, 0.13);
+}
+
+.map-popup-card {
+  width: 190px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 13px 13px 12px;
+  padding-right: 31px;
+}
+
+.map-popup-accent {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: linear-gradient(90deg, #713b99, #c996f3 55%, #713b99);
+}
+
+.map-popup-card strong {
+  margin-top: 2px;
+  color: #fbf7fd;
+  font-size: 14px;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+.map-popup-place {
+  color: #aea2b6 !important;
+  font-size: 10.5px !important;
+  line-height: 1.35;
+}
+
+.map-popup-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  margin-top: 2px;
+}
+
+.map-popup-type,
+.map-popup-rating {
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+  padding: 3px 7px;
+  border-radius: 999px;
+  font-size: 9px !important;
+  line-height: 1;
+}
+
+.map-popup-type {
+  color: #d9cde0 !important;
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.map-popup-rating {
+  color: #efd69b !important;
+  background: rgba(233, 200, 125, 0.07);
+  border: 1px solid rgba(233, 200, 125, 0.12);
+}
+
+.map-popup-card a {
+  align-self: flex-start;
+  margin-top: 3px;
+  color: #ce9af2;
+  font-size: 10.5px;
+  font-weight: 760;
+  letter-spacing: 0.01em;
+}
+
+.map-popup-card a:hover {
+  color: #ead2fb;
+}
+
+@media (max-width: 640px) {
+  .map-popup-card {
+    width: 176px;
+    padding: 12px 12px 11px;
+    padding-right: 29px;
+  }
+}
