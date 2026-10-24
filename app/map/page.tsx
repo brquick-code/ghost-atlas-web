@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import maplibregl from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
 
 type LocationRow = {
   id: string;
@@ -15,83 +17,47 @@ type LocationRow = {
   haunting_rating: number | null;
 };
 
-type MapInstance = {
-  addControl: (...args: unknown[]) => void;
-  on: (...args: unknown[]) => void;
-  addSource: (...args: unknown[]) => void;
-  addLayer: (...args: unknown[]) => void;
-  getCanvas: () => HTMLCanvasElement;
-};
-
-type PopupInstance = {
-  setLngLat: (coords: [number, number]) => PopupInstance;
-  setDOMContent: (node: HTMLElement) => PopupInstance;
-  addTo: (map: MapInstance) => PopupInstance;
-};
-
-type MapLibreNamespace = {
-  Map: new (options: Record<string, unknown>) => MapInstance;
-  NavigationControl: new (options?: Record<string, unknown>) => unknown;
-  Popup: new (options?: Record<string, unknown>) => PopupInstance;
-};
-
-declare global {
-  interface Window { maplibregl?: MapLibreNamespace }
-}
-
-function loadMapLibre() {
-  return new Promise<MapLibreNamespace>((resolve, reject) => {
-    if (window.maplibregl) return resolve(window.maplibregl);
-
-    if (!document.querySelector('link[data-maplibre]')) {
-      const link = document.createElement('link');
-      link.rel = 'stylesheet';
-      link.href = 'https://unpkg.com/maplibre-gl@6.15.0/dist/maplibre-gl.css';
-      link.dataset.maplibre = 'true';
-      document.head.appendChild(link);
-    }
-
-    const existing = document.querySelector('script[data-maplibre]') as HTMLScriptElement | null;
-    if (existing) {
-      existing.addEventListener('load', () => window.maplibregl ? resolve(window.maplibregl) : reject(new Error('Map library unavailable')));
-      return;
-    }
-
-    const script = document.createElement('script');
-    script.src = 'https://unpkg.com/maplibre-gl@6.15.0/dist/maplibre-gl.js';
-    script.async = true;
-    script.dataset.maplibre = 'true';
-    script.onload = () => window.maplibregl ? resolve(window.maplibregl) : reject(new Error('Map library unavailable'));
-    script.onerror = () => reject(new Error('Map library unavailable'));
-    document.head.appendChild(script);
-  });
-}
-
 export default function MapPage() {
   const mapNode = useRef<HTMLDivElement>(null);
-  const initialized = useRef(false);
   const [status, setStatus] = useState('Loading haunted locations…');
 
   useEffect(() => {
-    if (!mapNode.current || initialized.current) return;
-    initialized.current = true;
+    if (!mapNode.current) return;
 
-    Promise.all([
-      loadMapLibre(),
-      fetch('/api/locations').then((res) => {
-        if (!res.ok) throw new Error('Locations unavailable');
-        return res.json() as Promise<LocationRow[]>;
-      }),
-    ])
-      .then(([maplibre, locations]) => {
-        const mapped = locations.filter((item) => Number.isFinite(item.latitude) && Number.isFinite(item.longitude));
-        setStatus(`${mapped.length.toLocaleString()} haunted locations mapped`);
+    const controller = new AbortController();
+    let disposed = false;
+    let map: maplibregl.Map | null = null;
+
+    async function initializeMap() {
+      try {
+        const response = await fetch('/api/locations', {
+          signal: controller.signal,
+          cache: 'no-store',
+        });
+
+        if (!response.ok) throw new Error(`Locations request failed: ${response.status}`);
+
+        const locations = (await response.json()) as LocationRow[];
+        if (disposed || !mapNode.current) return;
+
+        const mapped = locations.filter(
+          (item) =>
+            typeof item.latitude === 'number' &&
+            Number.isFinite(item.latitude) &&
+            typeof item.longitude === 'number' &&
+            Number.isFinite(item.longitude)
+        );
+
+        if (!mapped.length) throw new Error('No mapped locations returned');
 
         const geojson = {
-          type: 'FeatureCollection',
+          type: 'FeatureCollection' as const,
           features: mapped.map((item) => ({
-            type: 'Feature',
-            geometry: { type: 'Point', coordinates: [item.longitude, item.latitude] },
+            type: 'Feature' as const,
+            geometry: {
+              type: 'Point' as const,
+              coordinates: [item.longitude as number, item.latitude as number],
+            },
             properties: {
               id: item.id,
               title: item.title,
@@ -103,16 +69,19 @@ export default function MapPage() {
           })),
         };
 
-        const map = new maplibre.Map({
-          container: mapNode.current as HTMLDivElement,
+        map = new maplibregl.Map({
+          container: mapNode.current,
           style: 'https://tiles.openfreemap.org/styles/liberty',
           center: [-98.5, 39.5],
           zoom: 3.2,
           attributionControl: true,
         });
-        map.addControl(new maplibre.NavigationControl(), 'top-right');
+
+        map.addControl(new maplibregl.NavigationControl(), 'top-right');
 
         map.on('load', () => {
+          if (!map || disposed) return;
+
           map.addSource('haunts', {
             type: 'geojson',
             data: geojson,
@@ -139,7 +108,10 @@ export default function MapPage() {
             type: 'symbol',
             source: 'haunts',
             filter: ['has', 'point_count'],
-            layout: { 'text-field': ['get', 'point_count_abbreviated'], 'text-size': 12 },
+            layout: {
+              'text-field': ['get', 'point_count_abbreviated'],
+              'text-size': 12,
+            },
             paint: { 'text-color': '#ffffff' },
           });
 
@@ -156,30 +128,75 @@ export default function MapPage() {
             },
           });
 
-          map.on('click', 'haunt-points', (event: { features?: Array<{ geometry?: { coordinates?: [number, number] }; properties?: Record<string, string> }> }) => {
+          map.on('click', 'clusters', async (event) => {
+            if (!map) return;
             const feature = event.features?.[0];
-            const coords = feature?.geometry?.coordinates;
-            const props = feature?.properties;
-            if (!coords || !props) return;
+            const clusterId = feature?.properties?.cluster_id;
+            const coordinates = feature?.geometry.type === 'Point' ? feature.geometry.coordinates : null;
+            if (clusterId == null || !coordinates) return;
+
+            const source = map.getSource('haunts') as maplibregl.GeoJSONSource;
+            try {
+              const zoom = await source.getClusterExpansionZoom(clusterId);
+              map.easeTo({ center: coordinates as [number, number], zoom });
+            } catch {
+              // A cluster can change while the map is moving. Safe to ignore.
+            }
+          });
+
+          map.on('click', 'haunt-points', (event) => {
+            if (!map) return;
+            const feature = event.features?.[0];
+            if (!feature || feature.geometry.type !== 'Point') return;
+
+            const coords = feature.geometry.coordinates as [number, number];
+            const props = feature.properties || {};
 
             const card = document.createElement('div');
             card.className = 'map-popup-card';
+
             const title = document.createElement('strong');
-            title.textContent = props.title || 'Haunted location';
+            title.textContent = String(props.title || 'Haunted location');
+
             const place = document.createElement('span');
-            place.textContent = props.place || '';
+            place.textContent = String(props.place || '');
+
             const link = document.createElement('a');
-            link.href = `/location/${props.slug}`;
+            link.href = `/location/${String(props.slug || '')}`;
             link.textContent = 'View location →';
+
             card.append(title, place, link);
-            new maplibre.Popup({ offset: 12 }).setLngLat(coords).setDOMContent(card).addTo(map);
+            new maplibregl.Popup({ offset: 12 })
+              .setLngLat(coords)
+              .setDOMContent(card)
+              .addTo(map);
           });
 
-          map.on('mouseenter', 'haunt-points', () => { map.getCanvas().style.cursor = 'pointer'; });
-          map.on('mouseleave', 'haunt-points', () => { map.getCanvas().style.cursor = ''; });
+          for (const layer of ['clusters', 'haunt-points']) {
+            map.on('mouseenter', layer, () => {
+              if (map) map.getCanvas().style.cursor = 'pointer';
+            });
+            map.on('mouseleave', layer, () => {
+              if (map) map.getCanvas().style.cursor = '';
+            });
+          }
+
+          setStatus(`${mapped.length.toLocaleString()} haunted locations mapped`);
         });
-      })
-      .catch(() => setStatus('The haunted map could not be loaded right now.'));
+      } catch (error) {
+        if (controller.signal.aborted || disposed) return;
+        console.error('Ghost Atlas map initialization failed', error);
+        setStatus('The haunted map could not be loaded right now.');
+      }
+    }
+
+    initializeMap();
+
+    return () => {
+      disposed = true;
+      controller.abort();
+      map?.remove();
+    };
   }, []);
 
   return (
