@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import { Geist } from 'next/font/google';
 import SiteHeader from '@/components/SiteHeader';
 import './globals.css';
-import './home-fixes.css';
 import './visual-polish.css';
+import './home-fixes.css';
 
 const geist = Geist({ subsets: ['latin'], variable: '--font-geist' });
 
