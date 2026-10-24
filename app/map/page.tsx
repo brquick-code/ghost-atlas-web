@@ -25,19 +25,20 @@ export default function MapPage() {
     if (!mapNode.current) return;
 
     const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 20000);
     let disposed = false;
     let map: maplibregl.Map | null = null;
 
     async function initializeMap() {
       try {
-        const response = await fetch('/api/locations', {
+        const response = await fetch('/api/map-locations', {
           signal: controller.signal,
-          cache: 'no-store',
         });
 
         if (!response.ok) throw new Error(`Locations request failed: ${response.status}`);
 
         const locations = (await response.json()) as LocationRow[];
+        if (!Array.isArray(locations)) throw new Error('Invalid map response');
         if (disposed || !mapNode.current) return;
 
         const mapped = locations.filter(
@@ -69,6 +70,8 @@ export default function MapPage() {
           })),
         };
 
+        setStatus(`${mapped.length.toLocaleString()} locations loaded · drawing map…`);
+
         map = new maplibregl.Map({
           container: mapNode.current,
           style: 'https://tiles.openfreemap.org/styles/liberty',
@@ -78,7 +81,7 @@ export default function MapPage() {
 
         map.addControl(new maplibregl.NavigationControl(), 'top-right');
 
-        map.on('load', () => {
+        map.once('load', () => {
           if (!map || disposed) return;
 
           map.addSource('haunts', {
@@ -95,10 +98,10 @@ export default function MapPage() {
             source: 'haunts',
             filter: ['has', 'point_count'],
             paint: {
-              'circle-color': '#6d3ba7',
-              'circle-stroke-color': '#c69aff',
-              'circle-stroke-width': 2,
-              'circle-radius': ['step', ['get', 'point_count'], 18, 25, 23, 100, 29],
+              'circle-color': '#7d43b5',
+              'circle-stroke-color': '#e3c2ff',
+              'circle-stroke-width': 2.5,
+              'circle-radius': ['step', ['get', 'point_count'], 19, 25, 24, 100, 30],
             },
           });
 
@@ -120,10 +123,10 @@ export default function MapPage() {
             source: 'haunts',
             filter: ['!', ['has', 'point_count']],
             paint: {
-              'circle-color': '#9d63d2',
+              'circle-color': '#bc7bf1',
               'circle-radius': 7,
               'circle-stroke-width': 2,
-              'circle-stroke-color': '#24102f',
+              'circle-stroke-color': '#25102f',
             },
           });
 
@@ -139,7 +142,7 @@ export default function MapPage() {
               const zoom = await source.getClusterExpansionZoom(clusterId);
               map.easeTo({ center: coordinates as [number, number], zoom });
             } catch {
-              // A cluster can change while the map is moving. Safe to ignore.
+              // Cluster membership can change while zooming.
             }
           });
 
@@ -183,9 +186,15 @@ export default function MapPage() {
           setStatus(`${mapped.length.toLocaleString()} haunted locations mapped`);
         });
       } catch (error) {
-        if (controller.signal.aborted || disposed) return;
+        if (disposed) return;
         console.error('Ghost Atlas map initialization failed', error);
-        setStatus('The haunted map could not be loaded right now.');
+        if (controller.signal.aborted) {
+          setStatus('The haunted map timed out. Please refresh and try again.');
+        } else {
+          setStatus('The haunted map could not be loaded right now.');
+        }
+      } finally {
+        window.clearTimeout(timeout);
       }
     }
 
@@ -193,6 +202,7 @@ export default function MapPage() {
 
     return () => {
       disposed = true;
+      window.clearTimeout(timeout);
       controller.abort();
       map?.remove();
     };
