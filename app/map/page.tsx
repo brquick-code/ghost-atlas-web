@@ -225,42 +225,78 @@ export default function MapPage() {
                 const card = document.createElement('div');
                 card.className = 'map-popup-card';
 
-                const accent = document.createElement('div');
-                accent.className = 'map-popup-accent';
+                const header = document.createElement('div');
+                header.className = 'map-popup-header';
+
+                const crest = document.createElement('div');
+                crest.className = 'map-popup-crest';
+                const crestDot = document.createElement('span');
+                crest.append(crestDot);
+
+                const heading = document.createElement('div');
+                heading.className = 'map-popup-heading';
+
+                const eyebrow = document.createElement('small');
+                eyebrow.className = 'map-popup-eyebrow';
+                eyebrow.textContent = 'GHOST ATLAS';
 
                 const title = document.createElement('strong');
                 title.textContent = String(props.title || 'Haunted location');
 
-                const place = document.createElement('span');
-                place.className = 'map-popup-place';
-                place.textContent = String(props.place || '');
+                heading.append(eyebrow, title);
+                header.append(crest, heading);
 
-                const meta = document.createElement('div');
-                meta.className = 'map-popup-meta';
+                const place = document.createElement('div');
+                place.className = 'map-popup-place';
+                const placeIcon = document.createElement('span');
+                placeIcon.className = 'map-popup-place-icon';
+                placeIcon.textContent = '⌖';
+                const placeText = document.createElement('span');
+                placeText.textContent = String(props.place || '');
+                place.append(placeIcon, placeText);
+
+                const details = document.createElement('div');
+                details.className = 'map-popup-details';
 
                 const locationType = String(props.locationType || '').trim();
-                const rating = Number(props.rating || 0);
+                const rating = Math.max(0, Math.min(5, Number(props.rating || 0)));
 
                 if (locationType) {
                   const type = document.createElement('span');
                   type.className = 'map-popup-type';
                   type.textContent = locationType;
-                  meta.append(type);
+                  details.append(type);
                 }
 
                 if (rating > 0) {
-                  const score = document.createElement('span');
-                  score.className = 'map-popup-rating';
-                  score.textContent = `★ ${rating}/5`;
-                  meta.append(score);
+                  const ratingRow = document.createElement('span');
+                  ratingRow.className = 'map-popup-rating';
+
+                  const ratingLabel = document.createElement('span');
+                  ratingLabel.textContent = 'Haunting';
+
+                  const stars = document.createElement('b');
+                  stars.textContent = `${'★'.repeat(Math.round(rating))}${'☆'.repeat(5 - Math.round(rating))}`;
+
+                  const score = document.createElement('em');
+                  score.textContent = `${rating}/5`;
+
+                  ratingRow.append(ratingLabel, stars, score);
+                  details.append(ratingRow);
                 }
 
                 const link = document.createElement('a');
+                link.className = 'map-popup-link';
                 link.href = `/location/${String(props.slug || '')}`;
-                link.textContent = 'View haunt →';
 
-                card.append(accent, title, place);
-                if (meta.childElementCount) card.append(meta);
+                const linkText = document.createElement('span');
+                linkText.textContent = 'Explore location';
+                const linkArrow = document.createElement('b');
+                linkArrow.textContent = '→';
+                link.append(linkText, linkArrow);
+
+                card.append(header, place);
+                if (details.childElementCount) card.append(details);
                 card.append(link);
 
                 activePopup = new maplibregl.Popup({
@@ -269,20 +305,18 @@ export default function MapPage() {
                   closeButton: true,
                   closeOnClick: true,
                   focusAfterOpen: false,
-                  maxWidth: '220px',
+                  maxWidth: '236px',
                 })
                   .setLngLat(coords)
                   .setDOMContent(card)
                   .addTo(map);
               };
 
-              // Keep the selected pin visibly below center so the compact popup
-              // has room above it instead of sitting on top of the marker.
               map.once('moveend', showPopup);
               map.easeTo({
                 center: coords,
                 zoom: targetZoom,
-                offset: [0, 90],
+                offset: [0, 96],
                 duration: targetZoom > currentZoom + 1 ? 800 : 450,
                 essential: true,
               });
