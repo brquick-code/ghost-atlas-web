@@ -28,14 +28,23 @@ export default function DirectoryPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    fetch('/api/locations')
+    const controller = new AbortController();
+
+    fetch('/api/locations', { signal: controller.signal })
       .then((res) => {
         if (!res.ok) throw new Error('Unable to load locations');
         return res.json();
       })
-      .then((data: LocationRow[]) => setLocations(data))
-      .catch(() => setError('The directory could not be loaded right now.'))
+      .then((data: LocationRow[]) => {
+        if (!Array.isArray(data)) throw new Error('Invalid directory response');
+        setLocations(data);
+      })
+      .catch((err) => {
+        if (err?.name !== 'AbortError') setError('The directory could not be loaded right now.');
+      })
       .finally(() => setLoading(false));
+
+    return () => controller.abort();
   }, []);
 
   useEffect(() => setPage(1), [query, scope, stateFilter]);
@@ -102,7 +111,7 @@ export default function DirectoryPage() {
         </div>
 
         <div className="result-bar">
-          <strong>{loading ? 'Loading…' : `${filtered.toLocaleString()} locations`}</strong>
+          <strong>{loading ? 'Loading…' : `${filtered.length.toLocaleString()} locations`}</strong>
           {!loading && filtered.length > 0 && <span>Page {page} of {pageCount}</span>}
         </div>
 
