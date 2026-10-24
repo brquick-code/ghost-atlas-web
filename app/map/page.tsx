@@ -210,6 +210,15 @@ export default function MapPage() {
               const coords = feature.geometry.coordinates as [number, number];
               const props = feature.properties || {};
 
+              // Match the mobile-app behavior: selecting a haunt centers it and
+              // zooms closer, but never zooms back out if the user is already in.
+              map.easeTo({
+                center: coords,
+                zoom: Math.max(map.getZoom(), 14),
+                duration: 700,
+                essential: true,
+              });
+
               const card = document.createElement('div');
               card.className = 'map-popup-card';
 
