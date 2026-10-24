@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import './map-overrides.css';
 
 maplibregl.setWorkerUrl(
   new URL('maplibre-gl/dist/maplibre-gl-worker.mjs', import.meta.url).toString()
@@ -35,7 +36,6 @@ function createGhostAtlasPin(): ImageData {
 
   context.clearRect(0, 0, width, height);
 
-  // Classic map-pin silhouette in the Ghost Atlas purple palette.
   context.beginPath();
   context.moveTo(centerX, height - 2);
   context.bezierCurveTo(width * 0.44, height * 0.86, width * 0.14, height * 0.61, width * 0.14, height * 0.36);
@@ -49,7 +49,6 @@ function createGhostAtlasPin(): ImageData {
   context.strokeStyle = '#26102f';
   context.stroke();
 
-  // Small light center keeps the marker readable over light and dark map areas.
   context.beginPath();
   context.arc(centerX, 20, 7.5, 0, Math.PI * 2);
   context.fillStyle = '#f1ddff';
@@ -72,6 +71,8 @@ export default function MapPage() {
     const timeout = window.setTimeout(() => controller.abort(), 20000);
     let disposed = false;
     let map: maplibregl.Map | null = null;
+    let activePopup: maplibregl.Popup | null = null;
+    let selectionToken = 0;
 
     async function initializeMap() {
       try {
@@ -188,6 +189,7 @@ export default function MapPage() {
 
             map.on('click', 'clusters', async (event) => {
               if (!map) return;
+              activePopup?.remove();
               const feature = event.features?.[0];
               const clusterId = feature?.properties?.cluster_id;
               const coordinates = feature?.geometry.type === 'Point' ? feature.geometry.coordinates : null;
@@ -196,7 +198,7 @@ export default function MapPage() {
               const source = map.getSource('haunts') as maplibregl.GeoJSONSource;
               try {
                 const zoom = await source.getClusterExpansionZoom(clusterId);
-                map.easeTo({ center: coordinates as [number, number], zoom });
+                map.easeTo({ center: coordinates as [number, number], zoom, duration: 500 });
               } catch {
                 // Cluster membership can change while zooming.
               }
@@ -209,34 +211,81 @@ export default function MapPage() {
 
               const coords = feature.geometry.coordinates as [number, number];
               const props = feature.properties || {};
+              const token = ++selectionToken;
+              const currentZoom = map.getZoom();
+              const targetZoom = Math.max(currentZoom, 14);
 
-              // Match the mobile-app behavior: selecting a haunt centers it and
-              // zooms closer, but never zooms back out if the user is already in.
+              activePopup?.remove();
+              activePopup = null;
+              map.stop();
+
+              const showPopup = () => {
+                if (!map || disposed || token !== selectionToken) return;
+
+                const card = document.createElement('div');
+                card.className = 'map-popup-card';
+
+                const accent = document.createElement('div');
+                accent.className = 'map-popup-accent';
+
+                const title = document.createElement('strong');
+                title.textContent = String(props.title || 'Haunted location');
+
+                const place = document.createElement('span');
+                place.className = 'map-popup-place';
+                place.textContent = String(props.place || '');
+
+                const meta = document.createElement('div');
+                meta.className = 'map-popup-meta';
+
+                const locationType = String(props.locationType || '').trim();
+                const rating = Number(props.rating || 0);
+
+                if (locationType) {
+                  const type = document.createElement('span');
+                  type.className = 'map-popup-type';
+                  type.textContent = locationType;
+                  meta.append(type);
+                }
+
+                if (rating > 0) {
+                  const score = document.createElement('span');
+                  score.className = 'map-popup-rating';
+                  score.textContent = `★ ${rating}/5`;
+                  meta.append(score);
+                }
+
+                const link = document.createElement('a');
+                link.href = `/location/${String(props.slug || '')}`;
+                link.textContent = 'View haunt →';
+
+                card.append(accent, title, place);
+                if (meta.childElementCount) card.append(meta);
+                card.append(link);
+
+                activePopup = new maplibregl.Popup({
+                  anchor: 'bottom',
+                  offset: 34,
+                  closeButton: true,
+                  closeOnClick: true,
+                  focusAfterOpen: false,
+                  maxWidth: '220px',
+                })
+                  .setLngLat(coords)
+                  .setDOMContent(card)
+                  .addTo(map);
+              };
+
+              // Keep the selected pin visibly below center so the compact popup
+              // has room above it instead of sitting on top of the marker.
+              map.once('moveend', showPopup);
               map.easeTo({
                 center: coords,
-                zoom: Math.max(map.getZoom(), 14),
-                duration: 700,
+                zoom: targetZoom,
+                offset: [0, 90],
+                duration: targetZoom > currentZoom + 1 ? 800 : 450,
                 essential: true,
               });
-
-              const card = document.createElement('div');
-              card.className = 'map-popup-card';
-
-              const title = document.createElement('strong');
-              title.textContent = String(props.title || 'Haunted location');
-
-              const place = document.createElement('span');
-              place.textContent = String(props.place || '');
-
-              const link = document.createElement('a');
-              link.href = `/location/${String(props.slug || '')}`;
-              link.textContent = 'View location →';
-
-              card.append(title, place, link);
-              new maplibregl.Popup({ offset: 26 })
-                .setLngLat(coords)
-                .setDOMContent(card)
-                .addTo(map);
             });
 
             for (const layer of ['clusters', 'haunt-points']) {
@@ -277,6 +326,8 @@ export default function MapPage() {
 
     return () => {
       disposed = true;
+      selectionToken += 1;
+      activePopup?.remove();
       window.clearTimeout(timeout);
       controller.abort();
       map?.remove();
