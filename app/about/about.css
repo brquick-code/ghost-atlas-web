@@ -1,0 +1,61 @@
+.about-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 34px;
+}
+
+.about-card {
+  padding: clamp(26px, 4vw, 38px);
+}
+
+.about-card h2 {
+  margin: 0 0 16px;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: clamp(27px, 4vw, 38px);
+  line-height: 1.08;
+  font-weight: 500;
+}
+
+.about-card p:not(.eyebrow) {
+  color: var(--muted);
+  line-height: 1.72;
+}
+
+.about-card .primary-button,
+.about-card .secondary-button {
+  margin-top: 12px;
+}
+
+.about-intro {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(28px, 6vw, 70px);
+}
+
+.about-intro > img {
+  width: 100%;
+  filter: drop-shadow(0 0 30px rgba(157, 99, 210, .3));
+}
+
+.app-download-card {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 30px;
+}
+
+.app-download-card > div:first-child {
+  max-width: 600px;
+}
+
+@media (max-width: 760px) {
+  .about-grid { grid-template-columns: 1fr; }
+  .about-intro, .app-download-card { grid-column: auto; }
+  .about-intro { grid-template-columns: 1fr; }
+  .about-intro > img { width: 130px; }
+  .app-download-card { align-items: flex-start; flex-direction: column; }
+}
