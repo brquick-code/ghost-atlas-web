@@ -27,12 +27,12 @@ function safeLinks(values: Array<string | null | undefined>) {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const location = await getLocationBySlugOrId(slug);
-  if (!location) return { title: 'Location Not Found | Ghost Atlas' };
+  if (!location) return { title: { absolute: 'Location Not Found | Ghost Atlas' } };
 
   const place = placeLine(location);
   const summary = location.legend_summary || location.description || `Explore ${location.title} in Ghost Atlas.`;
   return {
-    title: `${location.title}${place ? ` — ${place}` : ''} | Ghost Atlas`,
+    title: { absolute: `${location.title}${place ? ` — ${place}` : ''} | Ghost Atlas` },
     description: summary.slice(0, 160),
     alternates: { canonical: `/location/${location.slug || location.id}` },
   };
