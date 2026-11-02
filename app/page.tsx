@@ -85,6 +85,38 @@ export default async function Home() {
         </div>
       </section>
 
+      <section className="home-section">
+        <div className="content-shell">
+          <div className="section-heading split-heading">
+            <div>
+              <p className="eyebrow">STORIES &amp; GUIDES</p>
+              <h2>Go beyond the pin.</h2>
+            </div>
+            <Link href="/stories" className="text-link">View all guides →</Link>
+          </div>
+          <div className="latest-grid">
+            <Link href="/stories/how-ghost-atlas-researches-haunted-locations" className="latest-card panel">
+              <span className="card-kicker">BEHIND THE ATLAS</span>
+              <h3>How Ghost Atlas Researches Haunted Locations</h3>
+              <span className="latest-summary">How a place moves from a story or submission into a curated map entry—and why history and haunting claims need different evidence.</span>
+              <b>Read guide →</b>
+            </Link>
+            <Link href="/stories/history-folklore-and-reported-hauntings" className="latest-card panel">
+              <span className="card-kicker">READING THE STORIES</span>
+              <h3>History, Folklore &amp; Reported Hauntings</h3>
+              <span className="latest-summary">A practical guide to separating documented history from local legend, witness reports, paranormal tradition, and later retellings.</span>
+              <b>Read guide →</b>
+            </Link>
+            <Link href="/stories/exploring-haunted-places-responsibly" className="latest-card panel">
+              <span className="card-kicker">FIELD GUIDE</span>
+              <h3>Exploring Haunted Places Responsibly</h3>
+              <span className="latest-summary">How to research and visit strange places without turning curiosity into trespassing, unsafe exploration, or disrespect.</span>
+              <b>Read guide →</b>
+            </Link>
+          </div>
+        </div>
+      </section>
+
       <section className="home-section mobile-app-section">
         <div className="content-shell app-promo">
           <div>
