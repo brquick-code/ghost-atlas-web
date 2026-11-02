@@ -29,7 +29,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: base, changeFrequency: 'weekly', priority: 1 },
     { url: `${base}/map`, changeFrequency: 'weekly', priority: 0.9 },
     { url: `${base}/directory`, changeFrequency: 'daily', priority: 0.9 },
+    { url: `${base}/stories`, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${base}/stories/how-ghost-atlas-researches-haunted-locations`, changeFrequency: 'monthly', priority: 0.75 },
+    { url: `${base}/stories/history-folklore-and-reported-hauntings`, changeFrequency: 'monthly', priority: 0.75 },
+    { url: `${base}/stories/exploring-haunted-places-responsibly`, changeFrequency: 'monthly', priority: 0.75 },
     { url: `${base}/about`, changeFrequency: 'monthly', priority: 0.6 },
+    { url: `${base}/editorial-policy`, changeFrequency: 'monthly', priority: 0.6 },
+    { url: `${base}/privacy`, changeFrequency: 'monthly', priority: 0.5 },
     { url: `${base}/submit`, changeFrequency: 'monthly', priority: 0.5 },
   ];
 

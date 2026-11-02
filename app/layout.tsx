@@ -43,9 +43,12 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
             <p><strong>GHOST ATLAS</strong><span>Haunted Places. Mapped.</span></p>
           </div>
           <nav aria-label="Footer navigation">
+            <a href="/stories">Stories &amp; Guides</a>
+            <a href="/editorial-policy">Editorial Policy</a>
+            <a href="/privacy">Privacy</a>
             <a href="mailto:support@blacktidessoftware.com">Support</a>
             <a href="https://apps.apple.com/us/app/ghost-atlas-haunted-places/id6791018674" target="_blank" rel="noreferrer">iOS App</a>
-            <a href="https://play.google.com/store/apps/details?id=com.blacktidessoftware.ghostatlas" target="_blank" rel="noreferrer">Android App</a>
+            <a href="https://play.google.com/store/apps/details?id=com.blacktidesoftware.ghostatlas" target="_blank" rel="noreferrer">Android App</a>
           </nav>
           <small>© 2026 Black Tides Software LLC. Always respect private property and local laws.</small>
         </footer>
